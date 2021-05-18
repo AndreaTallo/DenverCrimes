@@ -6,10 +6,40 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import it.polito.tdp.crimes.model.Adiacenza;
 import it.polito.tdp.crimes.model.Event;
 
 
 public class EventsDao {
+	public List<String> getCategorie(){
+		String sql= "SELECT DISTINCT offense_category_id FROM events";
+		try {
+			Connection conn = DBConnect.getConnection() ;
+
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			
+			List<String> result = new ArrayList<>() ;
+			
+			ResultSet res = st.executeQuery() ;
+			
+			while(res.next()) {
+				result.add(res.getString("offense_category_id"));
+			}
+			res.close();
+			st.close();
+			conn.close();
+			
+		return result;
+		
+	}catch(SQLException e) {
+		e.printStackTrace();
+		return null;
+	}
+	
+
+
+	}
 	
 	public List<Event> listAllEvents(){
 		String sql = "SELECT * FROM events" ;
@@ -53,5 +83,71 @@ public class EventsDao {
 			return null ;
 		}
 	}
+	
+	public List<String> getVertici(String categoria, int mese){
+		String sql="SELECT DISTINCT offense_type_id "
+				+"FROM events "
+				+"WHERE offense_category_id=? AND Month(reported_date)=?";
+		
+		try {
+			
+			Connection conn = DBConnect.getConnection() ;
+
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			List<String> result=new ArrayList<String>();
+			
+			st.setString(1,categoria);
+			st.setInt(2, mese);
+			
+			ResultSet res = st.executeQuery() ;
+			while(res.next()) {
+				result.add(res.getString("offense_type_id"));
+			}
+			res.close();
+			st.close();
+			conn.close();
+			
+		return result;
+		
+	}catch(SQLException e) {
+		e.printStackTrace();
+		return null;
+	}
+	}
+		
+		public List<Adiacenza> getAdiacenze(String categoria,int mese){
+			String sql= "SELECT e1.offense_type_id as v1, e2.offense_type_id as v2, COUNT(DISTINCT(e1.neighborhood_id) as peso "
+					+"FROM events e1, events e2 "
+					+" WHERE e1.offense_category_id=? AND e1.offense_category_id= e2.offense_category_id "
+					+"AND Month(e1.reported_date)=? AND Month(e1.reported_date)=Month(e2.reported_date) "
+					+"AND e1.offense_type_id != e2.offense_type_id "
+					+"AND e1.neighborhood_id= e2.neighborhood_id "
+					+"GROUP BY e1.offense_type_id, e2.offense_type_id ";
+			try {
+				
+				Connection conn = DBConnect.getConnection() ;
+
+				PreparedStatement st = conn.prepareStatement(sql) ;
+				List<Adiacenza> result=new ArrayList<Adiacenza>();
+				
+				st.setString(1,categoria);
+				st.setInt(2, mese);
+				
+				ResultSet res = st.executeQuery() ;
+				while(res.next()) {
+					result.add(new Adiacenza(res.getString("v1"),res.getString("v2"),res.getInt("peso")));
+				}
+				res.close();
+				st.close();
+				conn.close();
+				
+			return result;
+			
+		}catch(SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+		}
 
 }
+
